@@ -68,7 +68,7 @@ class ProxyProperty(PropertyGroup):
     crf: bpy.props.IntProperty(
         name= "CRF Quality",
         description= "CRF Qulaity. Lower makes bigger file size and better quality.",
-        min= 5, max= 100,
+        min= 1, max= 35,
         default = 20 
         )
 
