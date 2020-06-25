@@ -1,2 +1,2 @@
 # blender-vse-easy-proxy
-Addon to create proxy files easily using [FFMPEG](https://ffmpeg.org/)
+[Blender](https://www.blender.org/) addon to create proxy files for Video Sequence Editor (VSE) easily using [FFMPEG](https://ffmpeg.org/)
