@@ -108,6 +108,8 @@ class ToggleEasyProxy(bpy.types.Operator):
         proxyfilepath = Path(context.preferences.addons[__name__].preferences.proxyfilepath)
         # activestrp= bpy.context.scene.sequence_editor.active_strip
 
+           
+        
         if self.toggle_proxy == True:
             for sq in bpy.context.scene.sequence_editor.sequences_all:
                 if sq.type == 'MOVIE':
@@ -217,6 +219,12 @@ class CreateAllProxy(bpy.types.Operator):
 
 
 
+
+        if bpy.context.scene.sequence_editor.active_strip.select == False:
+            bpy.ops.sequencer.select_all()
+        elif bpy.context.scene.sequence_editor.active_strip.type != 'MOVIE':
+            bpy.ops.sequencer.select_all()
+            bpy.ops.sequencer.select_all()    
         for sq in bpy.context.scene.sequence_editor.sequences_all:
             if sq.type == 'MOVIE':
                 activestrp= bpy.context.scene.sequence_editor.sequences_all[sq.name]
@@ -247,6 +255,8 @@ class CreateAllProxy(bpy.types.Operator):
                     activestrp.use_proxy = False
                     activestrp.use_proxy = True
                     # return {'FINISHED'}
+
+
 
         for area in bpy.context.screen.areas:
             if area.type == 'SEQUENCE_EDITOR':
