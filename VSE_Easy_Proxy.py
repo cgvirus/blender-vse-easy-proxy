@@ -109,29 +109,31 @@ class ToggleEasyProxy(bpy.types.Operator):
         # activestrp= bpy.context.scene.sequence_editor.active_strip
 
            
-        
-        if self.toggle_proxy == True:
-            for sq in bpy.context.scene.sequence_editor.sequences_all:
-                if sq.type == 'MOVIE':
-                    activestrp= bpy.context.scene.sequence_editor.sequences_all[sq.name]
-                    bpy.ops.sequencer.select_all()
-                    bpy.ops.sequencer.enable_proxies(proxy_50=True)
-                    activestrp.proxy.use_proxy_custom_directory = True
-                    activestrp.proxy.directory = str(proxyfilepath)
-                    for area in bpy.context.screen.areas:
-                        if area.type == 'SEQUENCE_EDITOR':
-                            for space in area.spaces:
-                                if space.type == 'SEQUENCE_EDITOR': 
-                                    space.proxy_render_size = 'PROXY_50'
-            self.toggle_proxy = not self.toggle_proxy
+        try:
+            if self.toggle_proxy == True:
+                for sq in bpy.context.scene.sequence_editor.sequences_all:
+                    if sq.type == 'MOVIE':
+                        activestrp= bpy.context.scene.sequence_editor.sequences_all[sq.name]
+                        bpy.ops.sequencer.select_all()
+                        bpy.ops.sequencer.enable_proxies(proxy_50=True)
+                        activestrp.proxy.use_proxy_custom_directory = True
+                        activestrp.proxy.directory = str(proxyfilepath)
+                        for area in bpy.context.screen.areas:
+                            if area.type == 'SEQUENCE_EDITOR':
+                                for space in area.spaces:
+                                    if space.type == 'SEQUENCE_EDITOR': 
+                                        space.proxy_render_size = 'PROXY_50'
+                self.toggle_proxy = not self.toggle_proxy
 
-        else:
-            for area in bpy.context.screen.areas:
-                if area.type == 'SEQUENCE_EDITOR':
-                    for space in area.spaces:
-                        if space.type == 'SEQUENCE_EDITOR': 
-                            space.proxy_render_size = 'SCENE'
-            self.toggle_proxy = True
+            else:
+                for area in bpy.context.screen.areas:
+                    if area.type == 'SEQUENCE_EDITOR':
+                        for space in area.spaces:
+                            if space.type == 'SEQUENCE_EDITOR': 
+                                space.proxy_render_size = 'SCENE'
+                self.toggle_proxy = True
+        except:
+            self.report({'WARNING'}, 'No Strip Selected')
     
         return {'FINISHED'}
 
@@ -164,37 +166,40 @@ class CreateProxy(bpy.types.Operator):
             return {'CANCELLED'}        
 
         else:
-            mov_path = Path(os.path.normpath(bpy.path.abspath(activestrp.filepath)))
-            mov_name = Path(bpy.path.basename(activestrp.filepath))
-            cmd = '%s -i "%s" -vf scale=640:-2 -vcodec libx264 -g 1 -bf 0 -vb 0 -crf %d -preset veryfast -acodec aac -ab 128k "%s/%s/%s" -y'\
-            %(ffmpegfilepath,mov_path,mytool.crf,proxyfilepath,mov_name,ext)
-            cmdpath=Path(cmd)
+            try:
+                mov_path = Path(os.path.normpath(bpy.path.abspath(activestrp.filepath)))
+                mov_name = Path(bpy.path.basename(activestrp.filepath))
+                cmd = '%s -i "%s" -vf scale=640:-2 -vcodec libx264 -g 1 -bf 0 -vb 0 -crf %d -preset veryfast -acodec aac -ab 128k "%s/%s/%s" -y'\
+                %(ffmpegfilepath,mov_path,mytool.crf,proxyfilepath,mov_name,ext)
+                cmdpath=Path(cmd)
 
-            # print(cmdpath)
-            bpy.ops.sequencer.enable_proxies(proxy_50=True)
-            activestrp.proxy.use_proxy_custom_directory = True
-            activestrp.proxy.directory = str(proxyfilepath)
+                # print(cmdpath)
+                bpy.ops.sequencer.enable_proxies(proxy_50=True)
+                activestrp.proxy.use_proxy_custom_directory = True
+                activestrp.proxy.directory = str(proxyfilepath)
+                
+                
+                if not os.path.exists(Path(proxyfilepath/mov_name)):
+                    os.makedirs(Path(proxyfilepath/mov_name))
+                if os.path.exists(Path(proxyfilepath/mov_name/ext)) and mytool.overwrite == False:
+                    self.report({'INFO'}, 'proxy exists')
+                    # return {'CANCELLED'}
+                else:
+                    proc = subprocess.Popen(str(cmdpath), stdin = subprocess.PIPE, stdout = subprocess.PIPE, shell=True)
+                    if mytool.freeze is True:
+                        proc.communicate()
+                        self.report({'INFO'}, 'Transcoding Done')                
+                    activestrp.use_proxy = False
+                    activestrp.use_proxy = True
+                    # return {'FINISHED'}
             
-            
-            if not os.path.exists(Path(proxyfilepath/mov_name)):
-                os.makedirs(Path(proxyfilepath/mov_name))
-            if os.path.exists(Path(proxyfilepath/mov_name/ext)) and mytool.overwrite == False:
-                self.report({'INFO'}, 'proxy exists')
-                # return {'CANCELLED'}
-            else:
-                proc = subprocess.Popen(str(cmdpath), stdin = subprocess.PIPE, stdout = subprocess.PIPE, shell=True)
-                if mytool.freeze is True:
-                    proc.communicate()
-                    self.report({'INFO'}, 'Transcoding Done')                
-                activestrp.use_proxy = False
-                activestrp.use_proxy = True
-                # return {'FINISHED'}
-        
-            for area in bpy.context.screen.areas:
-                if area.type == 'SEQUENCE_EDITOR':
-                    for space in area.spaces:
-                        if space.type == 'SEQUENCE_EDITOR': 
-                            space.proxy_render_size = 'PROXY_50'
+                for area in bpy.context.screen.areas:
+                    if area.type == 'SEQUENCE_EDITOR':
+                        for space in area.spaces:
+                            if space.type == 'SEQUENCE_EDITOR': 
+                                space.proxy_render_size = 'PROXY_50'
+            except:
+                self.report({'WARNING'}, 'No Strip Selected')
 
         return {'FINISHED'} 
 
