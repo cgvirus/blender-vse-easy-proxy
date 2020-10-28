@@ -1,5 +1,6 @@
 import os
-from sys import platform
+import platform
+#from sys import platform
 import shutil
 import subprocess
 from pathlib import Path
@@ -22,7 +23,7 @@ from bpy.props import (
 
 bl_info = {
     "name": "VSE Easy Proxy",
-    "author": "CGVIRUS",
+    "author": "CGVIRUS, tintwotin",
     "category": "Sequencer",
     "version": (1, 0),
     "wiki_url": "https://github.com/cgvirus/blender-vse-easy-proxy",
@@ -137,6 +138,10 @@ class CreateProxy(bpy.types.Operator):
             context.preferences.addons[__name__].preferences.proxyfilepath)
         ffmpegfilepath = Path(
             context.preferences.addons[__name__].preferences.ffmpegfilepath)
+        if not os.path.exists(ffmpegfilepath):
+            if platform.system() == 'Windows':
+                path_to_script_dir = os.path.dirname(os.path.abspath(__file__))
+                ffmpegfilepath = os.path.join(path_to_script_dir, 'ffmpeg.exe')
         ext = Path("proxy_50.avi")
 
         if activestrp.type == 'SOUND':
@@ -145,18 +150,13 @@ class CreateProxy(bpy.types.Operator):
         elif activestrp.type == 'IMAGE':
             self.report({'INFO'}, 'Cannot build proxy file for image strip')
             return {'CANCELLED'}
-
-        if not os.path.exists(ffmpegfilepath):
-            self.report({'WARNING'}, 'Path to ffmpeg is not set up in Preferences.')
-            return {'CANCELLED'}
-
         else:
             try:
                 mov_path = Path(
                     os.path.normpath(bpy.path.abspath(activestrp.filepath)))
                 mov_name = Path(bpy.path.basename(activestrp.filepath))
-                cmd = '%s -i "%s" -vf scale=640:-2 -vcodec libx264 -g 1 -bf 0 -vb 0 -crf %d -preset veryfast -threads 0 -acodec aac -ab 128k "%s/%s/%s" -y' % (
-                    ffmpegfilepath, mov_path, mytool.crf, proxyfilepath,
+                cmd = '%s -i "%s" -vf scale=640:-2 -vcodec libx264 -g 1 -bf 0 -vb 0 -crf %d -preset veryfast -tune fastdecode -acodec aac -ab 128k "%s/%s/%s" -y' % (
+                    chr(34)+ffmpegfilepath+chr(34), mov_path, mytool.crf, proxyfilepath,
                     mov_name, ext)
                 cmdpath = Path(cmd)
 
@@ -172,7 +172,7 @@ class CreateProxy(bpy.types.Operator):
                     self.report({'WARNING'}, 'Aborting. Proxy file exist: {0}'.format(mov_name))
                     # return {'CANCELLED'}
                 else:
-                    self.report({'INFO'}, 'Working on file: {0}'.format(mov_name))
+                    self.report({'INFO'}, 'Transcoding file: {0}'.format(mov_name))
                     proc = subprocess.Popen(
                         str(cmdpath),
                         stdin=subprocess.PIPE,
@@ -183,7 +183,6 @@ class CreateProxy(bpy.types.Operator):
                         self.report({'INFO'}, 'Transcoding done')
                     activestrp.use_proxy = False
                     activestrp.use_proxy = True
-                    # return {'FINISHED'}
 
                 for area in bpy.context.screen.areas:
                     if area.type == 'SEQUENCE_EDITOR':
@@ -206,12 +205,17 @@ class CreateAllProxy(bpy.types.Operator):
 
         scene = context.scene
         mytool = scene.easy_proxy
+        encoded = []
+        encoded.clear()
 
         proxyfilepath = Path(
             context.preferences.addons[__name__].preferences.proxyfilepath)
         ffmpegfilepath = Path(
             context.preferences.addons[__name__].preferences.ffmpegfilepath)
-
+        if not os.path.exists(ffmpegfilepath):
+            if platform.system() == 'Windows':
+                path_to_script_dir = os.path.dirname(os.path.abspath(__file__))
+                ffmpegfilepath = os.path.join(path_to_script_dir, 'ffmpeg.exe')
         ext = Path("proxy_50.avi")
 
         if not os.path.exists(ffmpegfilepath):
@@ -224,14 +228,14 @@ class CreateAllProxy(bpy.types.Operator):
             bpy.ops.sequencer.select_all()
             bpy.ops.sequencer.select_all()
         for sq in bpy.context.scene.sequence_editor.sequences_all:
-            if sq.type == 'MOVIE':
+            if sq.type == 'MOVIE' and sq.name not in encoded:
                 activestrp = bpy.context.scene.sequence_editor.sequences_all[
                     sq.name]
                 mov_path = Path(
                     os.path.normpath(bpy.path.abspath(activestrp.filepath)))
                 mov_name = Path(bpy.path.basename(activestrp.filepath))
-                cmd = '%s -i "%s" -vf scale=640:-2 -vcodec libx264 -g 1 -bf 0 -vb 0 -crf %d -preset veryfast -threads 0 -acodec aac -ab 128k "%s/%s/%s" -y' % (
-                    ffmpegfilepath, mov_path, mytool.crf, proxyfilepath,
+                cmd = '%s -i "%s" -vf scale=640:-2 -vcodec libx264 -g 1 -bf 0 -vb 0 -crf %d -preset veryfast -tune fastdecode -acodec aac -ab 128k "%s/%s/%s" -y' % (
+                    chr(34)+ffmpegfilepath+chr(34), mov_path, mytool.crf, proxyfilepath,
                     mov_name, ext)
                 cmdpath = Path(cmd)
 
@@ -247,7 +251,7 @@ class CreateAllProxy(bpy.types.Operator):
                     self.report({'WARNING'}, 'Aborting. Proxy file exist: {0}'.format(mov_name))
                     # return {'CANCELLED'}
                 else:
-                    self.report({'INFO'}, 'Working on file: {0}...'.format(mov_name))
+                    self.report({'INFO'}, 'Transcoding file: {0}...'.format(mov_name))
                     proc = subprocess.Popen(
                         str(cmdpath),
                         stdin=subprocess.PIPE,
@@ -260,6 +264,7 @@ class CreateAllProxy(bpy.types.Operator):
                     activestrp.use_proxy = False
                     activestrp.use_proxy = True
                     # return {'FINISHED'}
+                    encoded.append(sq.name)
 
         for area in bpy.context.screen.areas:
             if area.type == 'SEQUENCE_EDITOR':
@@ -335,6 +340,10 @@ class EasyProxyFilebrowser(bpy.types.Operator, ImportHelper):
             context.preferences.addons[__name__].preferences.proxyfilepath)
         ffmpegfilepath = Path(
             context.preferences.addons[__name__].preferences.ffmpegfilepath)
+        if not os.path.exists(ffmpegfilepath):
+            if platform.system() == 'Windows':
+                path_to_script_dir = os.path.dirname(os.path.abspath(__file__))
+                ffmpegfilepath = os.path.join(path_to_script_dir, 'ffmpeg.exe')
         ext = Path("proxy_50.avi")
 
         dirname = os.path.dirname(self.filepath)
@@ -348,8 +357,8 @@ class EasyProxyFilebrowser(bpy.types.Operator, ImportHelper):
 
             mov_path = Path(os.path.normpath(bpy.path.abspath(activestrp)))
             mov_name = Path(bpy.path.basename(activestrp))
-            cmd = '%s -i "%s" -vf scale=640:-2 -vcodec libx264 -g 1 -bf 0 -vb 0 -crf %d -preset veryfast -threads 0 -acodec aac -ab 128k "%s/%s/%s" -y' % (
-                ffmpegfilepath, mov_path, mytool.crf, proxyfilepath, mov_name,
+            cmd = '%s -i "%s" -vf scale=640:-2 -vcodec libx264 -g 1 -bf 0 -vb 0 -crf %d -preset veryfast -tune fastdecode -acodec aac -ab 128k "%s/%s/%s" -y' % (
+                chr(34)+ffmpegfilepath+chr(34), mov_path, mytool.crf, proxyfilepath, mov_name,
                 ext)
 
             cmdpath = Path(cmd)
@@ -362,7 +371,7 @@ class EasyProxyFilebrowser(bpy.types.Operator, ImportHelper):
                 self.report({'WARNING'}, 'Aborting. Proxy file exist: {0}'.format(mov_name))
                 # return {'CANCELLED'}
             else:
-                self.report({'INFO'}, 'Working on file: {0}...'.format(f.name))
+                self.report({'INFO'}, 'Transcoding file: {0}...'.format(f.name))
                 proc = subprocess.Popen(
                     str(cmdpath),
                     stdin=subprocess.PIPE,
