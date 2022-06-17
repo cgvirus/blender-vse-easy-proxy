@@ -370,7 +370,7 @@ class SequencerButtonsPanel:
 
 class SEQUENCER_PT_easy_proxy_settings(SequencerButtonsPanel, Panel):
     bl_label = "Easy Proxy Settings"
-    bl_category = "Proxy & Cache"
+    bl_category = "Proxy"
 
     @classmethod
     def poll(cls, context):
